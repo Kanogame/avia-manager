@@ -40,6 +40,7 @@ Examples:
 #include "abevents.h"
 #include "ablinks.h"
 #include "abvars.h"
+#include "dispatcher_app.h"
 
 int
 main ( int argc, char *argv[] )
@@ -54,8 +55,18 @@ main ( int argc, char *argv[] )
 	/* Display main window */
 	ApLinkWindow( NULL, &AbApplLinks[0], NULL );
 
+	/* Initialize dispatcher application */
+	if (DispatcherApp::instance()->initialize() != 0) {
+		fprintf(stderr, "Failed to initialize dispatcher application\n");
+		return 1;
+	}
+
 	/* Loop until user quits application */
 	PtMainLoop( );
+	
+	/* Cleanup */
+	DispatcherApp::instance()->shutdown();
+	
 	PtExit( 0 );
 
 	return 0;
