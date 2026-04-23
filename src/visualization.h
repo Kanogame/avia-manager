@@ -56,16 +56,16 @@ private:
     PgColor_t get_plane_color(PlaneStatus status);
 
     /* Helper: Draw triangle for plane (top view) */
-    void draw_plane_triangle(PgContext_t *context, ScreenCoords center, double heading, int size, PgColor_t color);
+    void draw_plane_triangle(ScreenCoords center, double heading, int size, PgColor_t color);
 
     /* Helper: Draw circle for plane (altitude view) */
-    void draw_plane_circle(PgContext_t *context, ScreenCoords center, int radius, PgColor_t color);
+    void draw_plane_circle(ScreenCoords center, int radius, PgColor_t color);
 
     /* Helper: Draw service area boundary */
-    void draw_service_area_box(PgContext_t *context, int view_width, int view_height);
+    void draw_service_area_box(int view_width, int view_height);
 
     /* Helper: Draw altitude axes and grid */
-    void draw_altitude_axes(PgContext_t *context, int view_width, int view_height);
+    void draw_altitude_axes(int view_width, int view_height);
 };
 
 #endif /* __VISUALIZATION_H__ */

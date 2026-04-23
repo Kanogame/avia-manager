@@ -21,7 +21,7 @@ Examples:
   Same as above
 
 %C -x10 -y10 -h200 -w300
-  Run at initial position 10,10 with initial 
+  Run at initial position 10,10 with initial
   dimension of 200x300.
 #endif
 
@@ -40,7 +40,10 @@ Examples:
 #include "abevents.h"
 #include "ablinks.h"
 #include "abvars.h"
-#include "dispatcher_app.h"
+
+/* C-compatible wrappers defined in abcalls.cc */
+extern int  app_initialize(void);
+extern void app_shutdown(void);
 
 int
 main ( int argc, char *argv[] )
@@ -56,17 +59,17 @@ main ( int argc, char *argv[] )
 	ApLinkWindow( NULL, &AbApplLinks[0], NULL );
 
 	/* Initialize dispatcher application */
-	if (DispatcherApp::instance()->initialize() != 0) {
+	if (app_initialize() != 0) {
 		fprintf(stderr, "Failed to initialize dispatcher application\n");
 		return 1;
 	}
 
 	/* Loop until user quits application */
 	PtMainLoop( );
-	
+
 	/* Cleanup */
-	DispatcherApp::instance()->shutdown();
-	
+	app_shutdown();
+
 	PtExit( 0 );
 
 	return 0;
