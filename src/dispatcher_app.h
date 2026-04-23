@@ -1,7 +1,7 @@
 #ifndef __DISPATCHER_APP_H__
 #define __DISPATCHER_APP_H__
 
-#include <photon/Pt.h>
+#include <Pt.h>
 #include <map>
 #include "ipc_manager.h"
 #include "plane_controller.h"

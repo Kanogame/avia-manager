@@ -2,7 +2,7 @@
 #define __IPC_MANAGER_H__
 
 #include <sys/neutrino.h>
-#include <photon/Pt.h>
+#include <Pt.h>
 #include "ipc_protocol.h"
 #include "plane_controller.h"
 

@@ -1,7 +1,7 @@
 #ifndef __VISUALIZATION_H__
 #define __VISUALIZATION_H__
 
-#include <photon/Pt.h>
+#include <Pt.h>
 #include <photon/Pg.h>
 #include "plane_controller.h"
 #include "collision_detector.h"
