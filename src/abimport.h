@@ -3,7 +3,7 @@
 #include "abdefine.h"
 
 extern ApWindowLink_t base;
-extern ApWidget_t AbWidgets[ 1 ];
+extern ApWidget_t AbWidgets[ 9 ];
 
 
 #ifdef __cplusplus

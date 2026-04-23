@@ -58,30 +58,36 @@ PtList
 ActivePlanesList
 1005
 dim
-177,293
+197,266
 1007
 pos
-11,84
+8,35
+1004
+data
+1
 0
 PtLabel
 4
 ActivePlanesLabel
 1007
 pos
-23,41
+9,11
 1005
 dim
 126,21
 3011
 multi
 33
-Активные самолеты0
+Активные самолеты1004
+data
+2
+0
 PtLabel
 4
 PlaneSelection
 1007
 pos
-28,402
+11,310
 1005
 dim
 155,22
@@ -89,6 +95,9 @@ dim
 multi
 42
 Управление самолетами
+1004
+data
+3
 0
 PtText
 4
@@ -101,7 +110,10 @@ string
 X
 1007
 pos
-31,446
+10,341
+1004
+data
+4
 0
 PtText
 4
@@ -114,7 +126,10 @@ string
 Y
 1007
 pos
-30,494
+10,382
+1004
+data
+5
 0
 PtButton
 4
@@ -124,10 +139,13 @@ multi
 23
 Сменить курс1007
 pos
-36,620
+7,429
 1005
 dim
-95,28
+197,28
+1004
+data
+6
 0
 PtDivider
 3
@@ -176,6 +194,9 @@ pos
 1005
 dim
 662,472
+1004
+data
+7
 0
 PtPane
 4
@@ -202,4 +223,7 @@ pos
 1005
 dim
 685,126
+1004
+data
+8
 0
