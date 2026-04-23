@@ -6,10 +6,11 @@
 #include <Pt.h>
 #include <Ap.h>
 
-#include "abdefine.h"
 #include "abimport.h"
-#include "abvars.h"
 #include "dispatcher_app.h"
+
+/* Forward declarations for callbacks defined below */
+static int change_course_btn_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo);
 
 /*
  * C-compatible wrappers called from abmain.c.
@@ -36,7 +37,7 @@ void app_shutdown(void)
 } /* extern "C" */
 
 /* "Change Course" button Pt_CB_ACTIVATE */
-int
+static int
 change_course_btn_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)
 {
     return DispatcherApp::instance()->change_course_callback(widget, apinfo, cbinfo);

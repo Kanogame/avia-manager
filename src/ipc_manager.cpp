@@ -41,9 +41,14 @@ int IPCManager::advertise_channel() {
     if (fd < 0) {
         return -1;
     }
-    
-    dprintf(fd, "%d %d\n", pid, chid);
-    close(fd);
+
+    FILE *f = fdopen(fd, "w");
+    if (!f) {
+        close(fd);
+        return -1;
+    }
+    fprintf(f, "%d %d\n", pid, chid);
+    fclose(f);  /* also closes fd */
     
     return 0;
 }

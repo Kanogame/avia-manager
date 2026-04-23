@@ -2,6 +2,7 @@
 #define __DISPATCHER_APP_H__
 
 #include <Pt.h>
+#include <Ap.h>
 #include <map>
 #include "ipc_manager.h"
 #include "plane_controller.h"

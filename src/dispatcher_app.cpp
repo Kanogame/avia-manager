@@ -1,6 +1,5 @@
 #include "dispatcher_app.h"
-#include "abdefine.h"
-#include "abvars.h"
+#include "abimport.h"
 #include "proto.h"
 #include <photon/PtTimer.h>
 #include <photon/PtWindow.h>
@@ -9,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <sys/neutrino.h>
 
 DispatcherApp* DispatcherApp::instance_ptr = NULL;
@@ -65,8 +65,7 @@ int DispatcherApp::initialize()
      * PtAppAddFd signature: int(PtAppContext_t, int fd, unsigned mode, PtFdProc_t, void*)
      * PtFdProc_t = int(*)(int fd, void *data, unsigned mode)
      */
-    PtAppContext_t app_ctx = PtAppGetContext(NULL);
-    if (PtAppAddFd(app_ctx, ipc_mgr.get_channel_id(), Pt_FD_READ,
+    if (PtAppAddFd(NULL, ipc_mgr.get_channel_id(), Pt_FD_READ,
                    ipc_channel_callback, NULL) < 0) {
         fprintf(stderr, "Failed to add channel FD to Photon\n");
         ipc_mgr.shutdown();

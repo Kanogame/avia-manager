@@ -1,5 +1,5 @@
 #include "collision_detector.h"
-#include <cmath>
+#include <math.h>
 
 CollisionDetector::CollisionDetector(PlaneController *controller) 
     : plane_controller(controller) {
