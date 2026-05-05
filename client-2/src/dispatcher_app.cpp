@@ -59,6 +59,9 @@ int DispatcherApp::initialize()
     PtSetResource(ABW_TopView, Pt_ARG_RAW_DRAW_F, draw_top_view_fn, 0);
     PtSetResource(ABW_AltView, Pt_ARG_RAW_DRAW_F, draw_alt_view_fn, 0);
 
+    PtAddCallback(ABW_TopView, Pt_CB_RAW,
+                  (PtCallbackF_t *)top_view_click_callback, NULL);
+
     PtAddCallback(ABW_ActivePlanesList, Pt_CB_SELECTION,
                   (PtCallbackF_t *)planes_list_callback, NULL);
 
@@ -178,6 +181,55 @@ int DispatcherApp::change_course_callback(PtWidget_t *widget, ApInfo_t *apinfo,
         if (heading < 0.0) heading += 360.0;
 
         app->plane_ctrl.send_command_change_heading(plane_id, heading);
+    }
+
+    return Pt_CONTINUE;
+}
+
+int DispatcherApp::top_view_click_callback(PtWidget_t *widget, ApInfo_t *apinfo,
+                                           PtCallbackInfo_t *cbinfo)
+{
+    DispatcherApp *app = DispatcherApp::instance();
+    if (!app || !cbinfo) return Pt_CONTINUE;
+
+    PtRawCallback_t *raw_cb = (PtRawCallback_t *)cbinfo->cbdata;
+    if (!raw_cb || !raw_cb->event) return Pt_CONTINUE;
+
+    PhEvent_t *event = raw_cb->event;
+    if (event->type != Ph_EV_BUT_PRESS) return Pt_CONTINUE;
+    if (event->buttons != Ph_BUTTON_SELECT) return Pt_CONTINUE;
+
+    PhDim_t dim;
+    PtWidgetDim(widget, &dim);
+    int w = (int)dim.w;
+    int h = (int)dim.h;
+
+    int click_x = event->pos.x;
+    int click_y = event->pos.y;
+
+    int plane_id = -1;
+    double world_x = 0.0, world_y = 0.0;
+
+    if (app->visualizer.hit_test_plane_top_view(click_x, click_y, w, h, &plane_id, &world_x, &world_y)) {
+        app->set_selected_plane_id(plane_id);
+
+        PlaneData *pdata = app->plane_ctrl.get_plane(plane_id);
+        if (pdata) {
+            char x_str[32], y_str[32];
+            snprintf(x_str, sizeof(x_str), "%.1f", pdata->x);
+            snprintf(y_str, sizeof(y_str), "%.1f", pdata->y);
+            PtSetResource(ABW_PlaneX, Pt_ARG_TEXT_STRING, x_str, 0);
+            PtSetResource(ABW_PlaneY, Pt_ARG_TEXT_STRING, y_str, 0);
+
+            PtListSelectPos(ABW_ActivePlanesList, 0, NULL, NULL);
+            for (std::map<int, int>::iterator it = app->list_index_to_plane_id.begin();
+                 it != app->list_index_to_plane_id.end(); ++it) {
+                if (it->second == plane_id) {
+                    PtListSelectPos(ABW_ActivePlanesList, it->first + 1, NULL, NULL);
+                    break;
+                }
+            }
+        }
     }
 
     return Pt_CONTINUE;

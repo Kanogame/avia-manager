@@ -20,6 +20,7 @@ public:
     static int timer_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo);
     static int plane_selection_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo);
     static int change_course_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo);
+    static int top_view_click_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo);
 
     PlaneController*    get_plane_controller()  { return &plane_ctrl; }
     CollisionDetector*  get_collision_detector() { return &collision_det; }

@@ -63,9 +63,14 @@ static int register_in_file(int plane_id, int pid, int chid)
         perror("fopen registry");
         return -1;
     }
+
+    flockfile(f);
     fprintf(f, "%d %d %d\n", plane_id, pid, chid);
+    fflush(f);
+    funlockfile(f);
+
     fclose(f);
-    fprintf(stderr, "plane %d: registered in %s\n", plane_id, PLANES_REGISTRY_FILE);
+    fprintf(stderr, "plane %d: registered in %s (pid=%d)\n", plane_id, PLANES_REGISTRY_FILE, pid);
     return 0;
 }
 
@@ -73,10 +78,28 @@ int main(int argc, char *argv[])
 {
     srand((unsigned)time(NULL) ^ (unsigned)getpid());
 
-    int plane_id = (argc >= 2) ? atoi(argv[1]) : (int)getpid();
+    int plane_id = (int)getpid();
+    double pos_x = -1.0, pos_y = -1.0;
+    int has_position = 0;
 
-    double pos_x    = rand_range(ZONE_MIN + 10.0, ZONE_MAX - 10.0);
-    double pos_y    = rand_range(ZONE_MIN + 10.0, ZONE_MAX - 10.0);
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-id") == 0 && i + 1 < argc) {
+            plane_id = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "-x") == 0 && i + 1 < argc) {
+            pos_x = atof(argv[++i]);
+            has_position = 1;
+        } else if (strcmp(argv[i], "-y") == 0 && i + 1 < argc) {
+            pos_y = atof(argv[++i]);
+            has_position = 1;
+        }
+    }
+
+    if (!has_position || pos_x < ZONE_MIN + 5.0 || pos_x > ZONE_MAX - 5.0 ||
+        pos_y < ZONE_MIN + 5.0 || pos_y > ZONE_MAX - 5.0) {
+        pos_x = rand_range(ZONE_MIN + 10.0, ZONE_MAX - 10.0);
+        pos_y = rand_range(ZONE_MIN + 10.0, ZONE_MAX - 10.0);
+    }
+
     double altitude = rand_range(1000.0, 9000.0);
 
     /* Pick a random point on the edge of the service zone and head toward it */
@@ -130,7 +153,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    fprintf(stderr, "plane %d: started, waiting for dispatcher\n", plane_id);
+    fprintf(stderr, "plane %d: started at (%.1f, %.1f), alt=%.0f, hdg=%.1f, waiting for dispatcher\n",
+            plane_id, pos_x, pos_y, altitude, heading);
 
     int running = 1;
     while (running) {

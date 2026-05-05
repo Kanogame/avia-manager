@@ -1,6 +1,7 @@
 #include "visualization.h"
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 Visualizer::Visualizer(PlaneController *controller, CollisionDetector *detector)
     : plane_controller(controller), collision_detector(detector) {
@@ -46,6 +47,21 @@ ScreenCoords Visualizer::world_to_screen_alt(double distance_from_center, double
     sc.screen_x = (int)(norm_x * (view_width - 1));
     sc.screen_y = (int)((1.0 - norm_y) * (view_height - 1));  /* Invert: altitude=up */
     return sc;
+}
+
+void Visualizer::screen_to_world_top(int screen_x, int screen_y, int view_width, int view_height,
+                                      double *out_world_x, double *out_world_y) {
+    double norm_x = (double)screen_x / (double)(view_width - 1);
+    double norm_y = (double)screen_y / (double)(view_height - 1);
+    norm_y = 1.0 - norm_y;  /* Invert back: north=up */
+
+    if (norm_x < 0.0) norm_x = 0.0;
+    if (norm_x > 1.0) norm_x = 1.0;
+    if (norm_y < 0.0) norm_y = 0.0;
+    if (norm_y > 1.0) norm_y = 1.0;
+
+    *out_world_x = SERVICE_AREA_X_MIN + norm_x * (SERVICE_AREA_X_MAX - SERVICE_AREA_X_MIN);
+    *out_world_y = SERVICE_AREA_Y_MIN + norm_y * (SERVICE_AREA_Y_MAX - SERVICE_AREA_Y_MIN);
 }
 
 void Visualizer::draw_plane_triangle(ScreenCoords center, double heading,
@@ -140,6 +156,41 @@ void Visualizer::draw_top_view(PtWidget_t *raw_widget) {
     }
 
     PgFlush();
+}
+
+int Visualizer::hit_test_plane_top_view(int screen_x, int screen_y, int view_width, int view_height,
+                                         int *out_plane_id, double *out_world_x, double *out_world_y) {
+    if (!plane_controller) return 0;
+
+    int plane_ids[256];
+    int plane_count = 0;
+    int closest_plane_id = -1;
+    double closest_dist = 15.0;  /* 15 pixel hit radius */
+
+    plane_controller->get_all_plane_ids(plane_ids, 256, &plane_count);
+
+    for (int i = 0; i < plane_count; i++) {
+        PlaneData *pdata = plane_controller->get_plane(plane_ids[i]);
+        if (!pdata) continue;
+
+        ScreenCoords sc = world_to_screen_top(pdata->x, pdata->y, view_width, view_height);
+        double dx = (double)(screen_x - sc.screen_x);
+        double dy = (double)(screen_y - sc.screen_y);
+        double dist = sqrt(dx * dx + dy * dy);
+
+        if (dist < closest_dist) {
+            closest_dist = dist;
+            closest_plane_id = plane_ids[i];
+        }
+    }
+
+    if (closest_plane_id >= 0) {
+        *out_plane_id = closest_plane_id;
+        screen_to_world_top(screen_x, screen_y, view_width, view_height, out_world_x, out_world_y);
+        return 1;
+    }
+
+    return 0;
 }
 
 void Visualizer::draw_altitude_view(PtWidget_t *raw_widget) {

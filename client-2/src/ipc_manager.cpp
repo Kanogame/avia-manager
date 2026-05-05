@@ -29,8 +29,18 @@ int IPCManager::connect_to_servers()
     FILE *f = fopen(PLANES_REGISTRY_FILE, "r");
     if (!f) return 0;   /* no servers yet — not an error */
 
+    flockfile(f);
+
     int plane_id, pid, chid;
+    int read_count = 0;
     while (fscanf(f, "%d %d %d", &plane_id, &pid, &chid) == 3) {
+        read_count++;
+
+        if (plane_id <= 0 || pid <= 0 || chid < 0) {
+            fprintf(stderr, "dispatcher: skipping invalid registry entry\n");
+            continue;
+        }
+
         if (connected_ids.find(plane_id) != connected_ids.end())
             continue;
 
@@ -44,6 +54,8 @@ int IPCManager::connect_to_servers()
         fprintf(stderr, "dispatcher: connected to plane %d (pid=%d chid=%d)\n",
                 plane_id, pid, chid);
     }
+
+    funlockfile(f);
     fclose(f);
     return 0;
 }

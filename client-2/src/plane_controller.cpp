@@ -1,6 +1,7 @@
 #include "plane_controller.h"
 #include <sys/time.h>
 #include <cstring>
+#include <stdio.h>
 
 PlaneController::PlaneController() {
 }
@@ -40,7 +41,9 @@ void PlaneController::register_plane(int plane_id, int coid) {
     new_plane.status = STATUS_NORMAL;
     new_plane.coid = coid;
     new_plane.last_update = get_tick_ms();
-    
+
+    fprintf(stderr, "plane_controller: registering plane %d with coid=%d\n", plane_id, coid);
+
     planes[plane_id] = new_plane;
 }
 
