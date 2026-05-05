@@ -9,7 +9,6 @@ PlaneController::~PlaneController() {
     clear();
 }
 
-/* Get current time in milliseconds */
 unsigned long PlaneController::get_tick_ms() {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -20,14 +19,11 @@ void PlaneController::update_plane(const PlaneState &state) {
     PlaneData *pdata = get_plane(state.plane_id);
     
     if (pdata) {
-        /* Update existing plane */
         pdata->x = state.x;
         pdata->y = state.y;
         pdata->altitude = state.altitude;
         pdata->heading = state.heading;
         pdata->last_update = get_tick_ms();
-        
-        /* Reset status to normal if it was offline */
         if (pdata->status == STATUS_OFFLINE) {
             pdata->status = STATUS_NORMAL;
         }
@@ -86,11 +82,9 @@ int PlaneController::send_command_change_heading(int plane_id, double heading) {
     cmd.plane_id = plane_id;
     cmd.new_heading = heading;
     
-    /* Send to plane via its coid */
-    char reply[32];
-    int result = MsgSend(pdata->coid, (char *)&cmd, sizeof(cmd), 
-                        reply, sizeof(reply));
-    return result;
+    AckMessage reply;
+    return MsgSend(pdata->coid, (char *)&cmd, sizeof(cmd),
+                   (char *)&reply, sizeof(reply));
 }
 
 int PlaneController::send_command_crash(int plane_id) {
@@ -98,22 +92,20 @@ int PlaneController::send_command_crash(int plane_id) {
     if (!pdata) {
         return -1;
     }
-    
+
     CommandCrash cmd;
     cmd.msg_type = MSG_COMMAND_CRASH;
     cmd.plane_id = plane_id;
-    
-    /* Send to plane via its coid */
-    char reply[32];
-    int result = MsgSend(pdata->coid, (char *)&cmd, sizeof(cmd), 
-                        reply, sizeof(reply));
-    return result;
+
+    AckMessage reply;
+    return MsgSend(pdata->coid, (char *)&cmd, sizeof(cmd),
+                   (char *)&reply, sizeof(reply));
 }
 
 void PlaneController::check_offline_planes() {
     unsigned long now = get_tick_ms();
-    const unsigned long TIMEOUT_MS = 5000;  /* 5 seconds */
-    
+    const unsigned long TIMEOUT_MS = 5000;
+
     for (std::map<int, PlaneData>::iterator it = planes.begin(); 
          it != planes.end(); ++it) {
         if (it->second.status != STATUS_OFFLINE) {

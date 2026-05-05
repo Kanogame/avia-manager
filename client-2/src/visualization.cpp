@@ -37,7 +37,7 @@ ScreenCoords Visualizer::world_to_screen_alt(double distance_from_center, double
                                               int view_width, int view_height) {
     ScreenCoords sc;
     double max_dist_km = 100.0;
-    double norm_x = (distance_from_center + max_dist_km / 2.0) / max_dist_km;
+    double norm_x = distance_from_center / max_dist_km;
     double norm_y = altitude / MAX_ALTITUDE;
     if (norm_x < 0.0) norm_x = 0.0;
     if (norm_x > 1.0) norm_x = 1.0;
@@ -50,20 +50,17 @@ ScreenCoords Visualizer::world_to_screen_alt(double distance_from_center, double
 
 void Visualizer::draw_plane_triangle(ScreenCoords center, double heading,
                                       int size, PgColor_t color) {
-    double radians = heading * 3.14159265358979 / 180.0;
+    double radians = heading * M_PI / 180.0;
     PhPoint_t pts[3];
 
-    /* Nose (front) */
     pts[0].x = (short)(center.screen_x + (int)(size * sin(radians)));
     pts[0].y = (short)(center.screen_y - (int)(size * cos(radians)));
 
-    /* Left rear */
-    double left_rad = radians + (2.0 * 3.14159265358979 / 3.0);
+    double left_rad = radians + (2.0 * M_PI / 3.0);
     pts[1].x = (short)(center.screen_x + (int)((size / 2) * sin(left_rad)));
     pts[1].y = (short)(center.screen_y - (int)((size / 2) * cos(left_rad)));
 
-    /* Right rear */
-    double right_rad = radians - (2.0 * 3.14159265358979 / 3.0);
+    double right_rad = radians - (2.0 * M_PI / 3.0);
     pts[2].x = (short)(center.screen_x + (int)((size / 2) * sin(right_rad)));
     pts[2].y = (short)(center.screen_y - (int)((size / 2) * cos(right_rad)));
 
@@ -101,11 +98,8 @@ void Visualizer::draw_service_area_box(int view_width, int view_height) {
 void Visualizer::draw_altitude_axes(int view_width, int view_height) {
     int i;
     PgSetStrokeColor(COLOR_AREA_GRID);
-    /* X axis */
     PgDrawILine(0, view_height - 20, view_width - 1, view_height - 20);
-    /* Y axis */
     PgDrawILine(20, 0, 20, view_height - 1);
-    /* Tick marks */
     for (i = 1; i < 5; i++) {
         int x = (i * view_width) / 5;
         int y = view_height - 20 - (i * (view_height - 20)) / 5;
@@ -127,18 +121,15 @@ void Visualizer::draw_top_view(PtWidget_t *raw_widget) {
     h = (int)dim.h;
     if (w <= 0 || h <= 0) return;
 
-    /* Clear background */
     PgSetFillColor(COLOR_AREA_BG);
     PgDrawIRect(0, 0, w - 1, h - 1, Pg_DRAW_FILL);
 
     draw_service_area_box(w, h);
 
-    /* Center cross */
     PgSetStrokeColor(COLOR_AREA_GRID);
     PgDrawILine(w/2 - 10, h/2, w/2 + 10, h/2);
     PgDrawILine(w/2, h/2 - 10, w/2, h/2 + 10);
 
-    /* Draw planes */
     plane_controller->get_all_plane_ids(plane_ids, 256, &plane_count);
     for (i = 0; i < plane_count; i++) {
         PlaneData *pdata = plane_controller->get_plane(plane_ids[i]);
@@ -164,13 +155,11 @@ void Visualizer::draw_altitude_view(PtWidget_t *raw_widget) {
     h = (int)dim.h;
     if (w <= 0 || h <= 0) return;
 
-    /* Clear background */
     PgSetFillColor(COLOR_AREA_BG);
     PgDrawIRect(0, 0, w - 1, h - 1, Pg_DRAW_FILL);
 
     draw_altitude_axes(w, h);
 
-    /* Draw planes as circles */
     plane_controller->get_all_plane_ids(plane_ids, 256, &plane_count);
     for (i = 0; i < plane_count; i++) {
         PlaneData *pdata = plane_controller->get_plane(plane_ids[i]);

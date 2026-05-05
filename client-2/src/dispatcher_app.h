@@ -9,7 +9,6 @@
 #include "collision_detector.h"
 #include "visualization.h"
 
-/* Global application context */
 class DispatcherApp {
 public:
     static DispatcherApp* instance();
@@ -17,10 +16,7 @@ public:
     int initialize();
     void shutdown();
 
-    /* IPC channel callback — matches PtFdProc_t: int(int fd, void *data, unsigned mode) */
     static int ipc_channel_callback(int fd, void *data, unsigned mode);
-
-    /* Photon widget callbacks — match ApCallbackF_t / PtCallbackF_t via cast */
     static int timer_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo);
     static int plane_selection_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo);
     static int change_course_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo);
@@ -47,7 +43,6 @@ private:
     int        selected_plane_id;
     PtWidget_t *timer_widget;
 
-    /* Maps 0-based list index → plane_id */
     std::map<int, int> list_index_to_plane_id;
 
     void update_ui_planes_list();
