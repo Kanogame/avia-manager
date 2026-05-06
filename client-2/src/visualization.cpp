@@ -155,7 +155,9 @@ void Visualizer::draw_top_view(PtWidget_t *raw_widget) {
         }
     }
 
+    fprintf(stderr, "draw_top_view: before PgFlush\n");
     PgFlush();
+    fprintf(stderr, "draw_top_view: after PgFlush\n");
 }
 
 int Visualizer::hit_test_plane_top_view(int screen_x, int screen_y, int view_width, int view_height,
@@ -221,5 +223,7 @@ void Visualizer::draw_altitude_view(PtWidget_t *raw_widget) {
         }
     }
 
+    fprintf(stderr, "draw_alt_view: before PgFlush\n");
     PgFlush();
+    fprintf(stderr, "draw_alt_view: after PgFlush\n");
 }

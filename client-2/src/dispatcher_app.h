@@ -4,6 +4,8 @@
 #include <Pt.h>
 #include <Ap.h>
 #include <map>
+#include <vector>
+#include <string>
 #include "ipc_manager.h"
 #include "plane_controller.h"
 #include "collision_detector.h"
@@ -45,6 +47,7 @@ private:
     PtWidget_t *timer_widget;
 
     std::map<int, int> list_index_to_plane_id;
+    std::vector<std::string> plane_list_items;
 
     void update_ui_planes_list();
     void redraw_views();
