@@ -30,7 +30,7 @@ public:
     IPCManager*         get_ipc_manager()        { return &ipc_mgr; }
 
     int  get_selected_plane_id() const     { return selected_plane_id; }
-    void set_selected_plane_id(int id)     { selected_plane_id = id; }
+    void set_selected_plane_id(int id)     { selected_plane_id = id; visualizer.set_selected_plane_id(id); }
 
 private:
     DispatcherApp();

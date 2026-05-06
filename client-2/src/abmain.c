@@ -54,11 +54,6 @@ main ( int argc, char *argv[] )
 	/* Display main window */
 	ApLinkWindow( NULL, &AbApplLinks[0], NULL );
 
-	if (app_initialize() != 0) {
-        fprintf(stderr, "Failed to initialize dispatcher app\n");
-        return 1;
-    }
-
 	/* Loop until user quits application */
 	PtMainLoop( );
 	PtExit( 0 );
@@ -70,12 +65,11 @@ static const ApClassTab_t ClassTable[] = {
 	{ "PtWindow", &PtWindow },
 	{ "PtDivider", &PtDivider },
 	{ "PtPane", &PtPane },
-	{ "PtList", &PtList },
 	{ "PtLabel", &PtLabel },
+	{ "PtList", &PtList },
 	{ "PtText", &PtText },
 	{ "PtButton", &PtButton },
 	{ "PtRaw", &PtRaw },
-	{ "PtTimer", &PtTimer },
 	{ NULL, NULL }
 	};
 

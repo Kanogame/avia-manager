@@ -5,6 +5,6 @@ extern ApContext_t AbContext;
 ApWindowLink_t base = {
 	"base.wgtw",
 	&AbContext,
-	AbLinks_base, 0, 1
+	NULL, 0, 0
 	};
 

@@ -51,8 +51,6 @@ int IPCManager::connect_to_servers()
 
         plane_ctrl->register_plane(plane_id, coid);
         connected_ids.insert(plane_id);
-        fprintf(stderr, "dispatcher: connected to plane %d (pid=%d chid=%d)\n",
-                plane_id, pid, chid);
     }
 
     funlockfile(f);

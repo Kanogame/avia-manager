@@ -7,9 +7,4 @@ extern ApWidget_t AbWidgets[ 9 ];
 
 
 #ifdef __cplusplus
-extern "C" {
-#endif
-int abcalls( PtWidget_t *widget, ApInfo_t *data, PtCallbackInfo_t *cbinfo );
-#ifdef __cplusplus
-}
 #endif

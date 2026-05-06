@@ -34,22 +34,18 @@ DispatcherApp* DispatcherApp::instance()
 
 static void draw_top_view_fn(PtWidget_t *widget, PhTile_t *damage)
 {
-    fprintf(stderr, "draw_top_view_fn: enter\n");
     DispatcherApp *app = DispatcherApp::instance();
     if (app && widget) {
         app->get_visualizer()->draw_top_view(widget);
     }
-    fprintf(stderr, "draw_top_view_fn: done\n");
 }
 
 static void draw_alt_view_fn(PtWidget_t *widget, PhTile_t *damage)
 {
-    fprintf(stderr, "draw_alt_view_fn: enter\n");
     DispatcherApp *app = DispatcherApp::instance();
     if (app && widget) {
         app->get_visualizer()->draw_altitude_view(widget);
     }
-    fprintf(stderr, "draw_alt_view_fn: done\n");
 }
 
 int DispatcherApp::initialize()
@@ -121,15 +117,10 @@ int DispatcherApp::timer_callback(PtWidget_t *widget, ApInfo_t *apinfo,
         app->ipc_mgr.connect_to_servers();
     }
 
-    fprintf(stderr, "timer: tick=%d, checking offline\n", tick);
     app->plane_ctrl.check_offline_planes();
-    fprintf(stderr, "timer: checking collisions\n");
     app->collision_det.check_collisions();
-    fprintf(stderr, "timer: updating ui list\n");
     app->update_ui_planes_list();
-    fprintf(stderr, "timer: redrawing\n");
     app->redraw_views();
-    fprintf(stderr, "timer: done\n");
 
     return Pt_CONTINUE;
 }
@@ -203,8 +194,6 @@ int DispatcherApp::top_view_click_callback(PtWidget_t *widget, ApInfo_t *apinfo,
     if (!app || !cbinfo) return Pt_CONTINUE;
 
     PhEvent_t *event = cbinfo->event;
-    fprintf(stderr, "top_view_click: event=%p type=%lu\n",
-            (void*)event, event ? (unsigned long)event->type : 0UL);
     if (!event || event->type != Ph_EV_BUT_PRESS) return Pt_CONTINUE;
 
     PhPointerEvent_t *pe = (PhPointerEvent_t *)PhGetData(event);
@@ -216,8 +205,11 @@ int DispatcherApp::top_view_click_callback(PtWidget_t *widget, ApInfo_t *apinfo,
     int w = (int)dim.w;
     int h = (int)dim.h;
 
-    int click_x = pe->pos.x;
-    int click_y = pe->pos.y;
+    /* pe->pos is in absolute screen coordinates; convert to widget-local */
+    short wx, wy;
+    PtGetAbsPosition(widget, &wx, &wy);
+    int click_x = pe->pos.x - (int)wx;
+    int click_y = pe->pos.y - (int)wy;
 
     int plane_id = -1;
     double world_x = 0.0, world_y = 0.0;
@@ -255,11 +247,9 @@ void DispatcherApp::update_ui_planes_list()
 
     plane_ctrl.get_all_plane_ids(plane_ids, MAX_PLANES, &plane_count);
 
-    fprintf(stderr, "update_list: plane_count=%d, deleting items\n", plane_count);
     PtListDeleteAllItems(ABW_ActivePlanesList);
     list_index_to_plane_id.clear();
     plane_list_items.clear();
-    fprintf(stderr, "update_list: cleared, building list\n");
 
     for (int i = 0; i < plane_count; i++) {
         PlaneData *pdata = plane_ctrl.get_plane(plane_ids[i]);
@@ -276,15 +266,23 @@ void DispatcherApp::update_ui_planes_list()
                  pdata->plane_id, pdata->x, pdata->y,
                  pdata->altitude, pdata->heading, status_str);
 
-        fprintf(stderr, "update_list: adding item %d: %s\n", i, item_text);
         plane_list_items.push_back(std::string(item_text));
         const char *item_ptr = plane_list_items.back().c_str();
         PtListAddItems(ABW_ActivePlanesList, &item_ptr, 1, 0);
-        fprintf(stderr, "update_list: item %d added\n", i);
 
         list_index_to_plane_id[i] = plane_ids[i];
     }
-    fprintf(stderr, "update_list: done\n");
+
+    /* Re-apply selection so it survives list rebuilds */
+    if (selected_plane_id >= 0) {
+        for (std::map<int,int>::iterator it = list_index_to_plane_id.begin();
+             it != list_index_to_plane_id.end(); ++it) {
+            if (it->second == selected_plane_id) {
+                PtListSelectPos(ABW_ActivePlanesList, it->first + 1);
+                break;
+            }
+        }
+    }
 }
 
 void DispatcherApp::redraw_views()

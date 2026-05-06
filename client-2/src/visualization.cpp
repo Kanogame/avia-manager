@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 Visualizer::Visualizer(PlaneController *controller, CollisionDetector *detector)
-    : plane_controller(controller), collision_detector(detector) {
+    : plane_controller(controller), collision_detector(detector), selected_plane_id(-1) {
 }
 
 Visualizer::~Visualizer() {
@@ -29,56 +29,56 @@ ScreenCoords Visualizer::world_to_screen_top(double world_x, double world_y,
     if (norm_x > 1.0) norm_x = 1.0;
     if (norm_y < 0.0) norm_y = 0.0;
     if (norm_y > 1.0) norm_y = 1.0;
-    sc.screen_x = (int)(norm_x * (view_width - 1));
-    sc.screen_y = (int)((1.0 - norm_y) * (view_height - 1));  /* Invert: north=up */
+    /* Returns widget-local coordinates (0,0) at widget top-left */
+    sc.screen_x = (int)(norm_x * (double)(view_width  - 1));
+    sc.screen_y = (int)((1.0 - norm_y) * (double)(view_height - 1));  /* north = up */
     return sc;
 }
 
 ScreenCoords Visualizer::world_to_screen_alt(double distance_from_center, double altitude,
                                               int view_width, int view_height) {
     ScreenCoords sc;
-    double max_dist_km = 100.0;
-    double norm_x = distance_from_center / max_dist_km;
-    double norm_y = altitude / MAX_ALTITUDE;
+    double norm_x = distance_from_center / MAX_DISTANCE;
+    double norm_y = altitude / (double)MAX_ALTITUDE;
     if (norm_x < 0.0) norm_x = 0.0;
     if (norm_x > 1.0) norm_x = 1.0;
     if (norm_y < 0.0) norm_y = 0.0;
     if (norm_y > 1.0) norm_y = 1.0;
-    sc.screen_x = (int)(norm_x * (view_width - 1));
-    sc.screen_y = (int)((1.0 - norm_y) * (view_height - 1));  /* Invert: altitude=up */
+    /* Returns widget-local coordinates (0,0) at widget top-left */
+    sc.screen_x = (int)(norm_x * (double)(view_width  - 1));
+    sc.screen_y = (int)((1.0 - norm_y) * (double)(view_height - 1));  /* altitude = up */
     return sc;
 }
 
 void Visualizer::screen_to_world_top(int screen_x, int screen_y, int view_width, int view_height,
                                       double *out_world_x, double *out_world_y) {
-    double norm_x = (double)screen_x / (double)(view_width - 1);
-    double norm_y = (double)screen_y / (double)(view_height - 1);
-    norm_y = 1.0 - norm_y;  /* Invert back: north=up */
-
+    double norm_x = (view_width  > 1) ? (double)screen_x / (double)(view_width  - 1) : 0.0;
+    double norm_y = (view_height > 1) ? (double)screen_y / (double)(view_height - 1) : 0.0;
+    norm_y = 1.0 - norm_y;
     if (norm_x < 0.0) norm_x = 0.0;
     if (norm_x > 1.0) norm_x = 1.0;
     if (norm_y < 0.0) norm_y = 0.0;
     if (norm_y > 1.0) norm_y = 1.0;
-
     *out_world_x = SERVICE_AREA_X_MIN + norm_x * (SERVICE_AREA_X_MAX - SERVICE_AREA_X_MIN);
     *out_world_y = SERVICE_AREA_Y_MIN + norm_y * (SERVICE_AREA_Y_MAX - SERVICE_AREA_Y_MIN);
 }
 
-void Visualizer::draw_plane_triangle(ScreenCoords center, double heading,
-                                      int size, PgColor_t color) {
-    double radians = heading * M_PI / 180.0;
+/* ---- static drawing helpers (widget-local coordinates) ---- */
+
+static void draw_triangle(ScreenCoords center, double heading, int size, PgColor_t color) {
+    double rad = heading * M_PI / 180.0;
     PhPoint_t pts[3];
 
-    pts[0].x = (short)(center.screen_x + (int)(size * sin(radians)));
-    pts[0].y = (short)(center.screen_y - (int)(size * cos(radians)));
+    pts[0].x = (short)(center.screen_x + (int)(size * sin(rad)));
+    pts[0].y = (short)(center.screen_y - (int)(size * cos(rad)));
 
-    double left_rad = radians + (2.0 * M_PI / 3.0);
-    pts[1].x = (short)(center.screen_x + (int)((size / 2) * sin(left_rad)));
-    pts[1].y = (short)(center.screen_y - (int)((size / 2) * cos(left_rad)));
+    double lrad = rad + (2.0 * M_PI / 3.0);
+    pts[1].x = (short)(center.screen_x + (int)((size / 2) * sin(lrad)));
+    pts[1].y = (short)(center.screen_y - (int)((size / 2) * cos(lrad)));
 
-    double right_rad = radians - (2.0 * M_PI / 3.0);
-    pts[2].x = (short)(center.screen_x + (int)((size / 2) * sin(right_rad)));
-    pts[2].y = (short)(center.screen_y - (int)((size / 2) * cos(right_rad)));
+    double rrad = rad - (2.0 * M_PI / 3.0);
+    pts[2].x = (short)(center.screen_x + (int)((size / 2) * sin(rrad)));
+    pts[2].y = (short)(center.screen_y - (int)((size / 2) * cos(rrad)));
 
     PgSetFillColor(color);
     PgDrawPolygon(pts, 3, NULL, Pg_DRAW_FILL);
@@ -86,7 +86,7 @@ void Visualizer::draw_plane_triangle(ScreenCoords center, double heading,
     PgDrawPolygon(pts, 3, NULL, Pg_POLY_STROKE_CLOSED);
 }
 
-void Visualizer::draw_plane_circle(ScreenCoords center, int radius, PgColor_t color) {
+static void draw_circle(ScreenCoords center, int radius, PgColor_t color) {
     PhPoint_t c, r;
     c.x = (short)center.screen_x;
     c.y = (short)center.screen_y;
@@ -98,37 +98,24 @@ void Visualizer::draw_plane_circle(ScreenCoords center, int radius, PgColor_t co
     PgDrawEllipse(&c, &r, Pg_DRAW_STROKE);
 }
 
-void Visualizer::draw_service_area_box(int view_width, int view_height) {
-    ScreenCoords mn = world_to_screen_top(SERVICE_AREA_X_MIN, SERVICE_AREA_Y_MIN,
-                                          view_width, view_height);
-    ScreenCoords mx = world_to_screen_top(SERVICE_AREA_X_MAX, SERVICE_AREA_Y_MAX,
-                                          view_width, view_height);
-    int x1 = (mn.screen_x < mx.screen_x) ? mn.screen_x : mx.screen_x;
-    int y1 = (mn.screen_y < mx.screen_y) ? mn.screen_y : mx.screen_y;
-    int x2 = (mn.screen_x > mx.screen_x) ? mn.screen_x : mx.screen_x;
-    int y2 = (mn.screen_y > mx.screen_y) ? mn.screen_y : mx.screen_y;
-    PgSetStrokeColor(COLOR_AREA_GRID);
-    PgDrawIRect(x1, y1, x2, y2, Pg_DRAW_STROKE);
+static void draw_selection_ring(ScreenCoords center, int radius) {
+    PhPoint_t c, r;
+    c.x = (short)center.screen_x;
+    c.y = (short)center.screen_y;
+    r.x = (short)radius;
+    r.y = (short)radius;
+    PgSetStrokeColor(COLOR_SELECTED);
+    PgDrawEllipse(&c, &r, Pg_DRAW_STROKE);
 }
 
-void Visualizer::draw_altitude_axes(int view_width, int view_height) {
-    int i;
-    PgSetStrokeColor(COLOR_AREA_GRID);
-    PgDrawILine(0, view_height - 20, view_width - 1, view_height - 20);
-    PgDrawILine(20, 0, 20, view_height - 1);
-    for (i = 1; i < 5; i++) {
-        int x = (i * view_width) / 5;
-        int y = view_height - 20 - (i * (view_height - 20)) / 5;
-        PgDrawILine(x, view_height - 25, x, view_height - 15);
-        PgDrawILine(15, y, 25, y);
-    }
-}
+/* ---- public draw functions ---- */
 
 void Visualizer::draw_top_view(PtWidget_t *raw_widget) {
     PhDim_t dim;
     int w, h, i;
     int plane_ids[256];
     int plane_count = 0;
+    double g;
 
     if (!raw_widget || !plane_controller) return;
 
@@ -137,69 +124,79 @@ void Visualizer::draw_top_view(PtWidget_t *raw_widget) {
     h = (int)dim.h;
     if (w <= 0 || h <= 0) return;
 
+    /* fill background */
     PgSetFillColor(COLOR_AREA_BG);
     PgDrawIRect(0, 0, w - 1, h - 1, Pg_DRAW_FILL);
 
-    draw_service_area_box(w, h);
-
+    /* grid: vertical lines every 10 km */
     PgSetStrokeColor(COLOR_AREA_GRID);
-    PgDrawILine(w/2 - 10, h/2, w/2 + 10, h/2);
-    PgDrawILine(w/2, h/2 - 10, w/2, h/2 + 10);
+    for (g = SERVICE_AREA_X_MIN; g <= SERVICE_AREA_X_MAX + 0.001; g += 10.0) {
+        ScreenCoords a = world_to_screen_top(g, SERVICE_AREA_Y_MIN, w, h);
+        ScreenCoords b = world_to_screen_top(g, SERVICE_AREA_Y_MAX, w, h);
+        PgDrawILine(a.screen_x, a.screen_y, b.screen_x, b.screen_y);
+    }
+    /* grid: horizontal lines every 10 km */
+    for (g = SERVICE_AREA_Y_MIN; g <= SERVICE_AREA_Y_MAX + 0.001; g += 10.0) {
+        ScreenCoords a = world_to_screen_top(SERVICE_AREA_X_MIN, g, w, h);
+        ScreenCoords b = world_to_screen_top(SERVICE_AREA_X_MAX, g, w, h);
+        PgDrawILine(a.screen_x, a.screen_y, b.screen_x, b.screen_y);
+    }
 
+    /* planes */
     plane_controller->get_all_plane_ids(plane_ids, 256, &plane_count);
     for (i = 0; i < plane_count; i++) {
         PlaneData *pdata = plane_controller->get_plane(plane_ids[i]);
-        if (pdata) {
-            ScreenCoords sc = world_to_screen_top(pdata->x, pdata->y, w, h);
-            draw_plane_triangle(sc, pdata->heading, 8, get_plane_color(pdata->status));
-        }
+        if (!pdata) continue;
+        ScreenCoords sc = world_to_screen_top(pdata->x, pdata->y, w, h);
+        draw_triangle(sc, pdata->heading, 8, get_plane_color(pdata->status));
+        if (pdata->plane_id == selected_plane_id)
+            draw_selection_ring(sc, 13);
     }
 
-    fprintf(stderr, "draw_top_view: before PgFlush\n");
     PgFlush();
-    fprintf(stderr, "draw_top_view: after PgFlush\n");
 }
 
-int Visualizer::hit_test_plane_top_view(int screen_x, int screen_y, int view_width, int view_height,
+int Visualizer::hit_test_plane_top_view(int local_x, int local_y, int view_width, int view_height,
                                          int *out_plane_id, double *out_world_x, double *out_world_y) {
-    if (!plane_controller) return 0;
-
     int plane_ids[256];
     int plane_count = 0;
-    int closest_plane_id = -1;
-    double closest_dist = 15.0;  /* 15 pixel hit radius */
+    int closest_id = -1;
+    double closest_dist = 15.0;
+    int i;
+
+    if (!plane_controller) return 0;
 
     plane_controller->get_all_plane_ids(plane_ids, 256, &plane_count);
 
-    for (int i = 0; i < plane_count; i++) {
+    for (i = 0; i < plane_count; i++) {
         PlaneData *pdata = plane_controller->get_plane(plane_ids[i]);
         if (!pdata) continue;
 
         ScreenCoords sc = world_to_screen_top(pdata->x, pdata->y, view_width, view_height);
-        double dx = (double)(screen_x - sc.screen_x);
-        double dy = (double)(screen_y - sc.screen_y);
+        double dx = (double)(local_x - sc.screen_x);
+        double dy = (double)(local_y - sc.screen_y);
         double dist = sqrt(dx * dx + dy * dy);
 
         if (dist < closest_dist) {
             closest_dist = dist;
-            closest_plane_id = plane_ids[i];
+            closest_id = plane_ids[i];
         }
     }
 
-    if (closest_plane_id >= 0) {
-        *out_plane_id = closest_plane_id;
-        screen_to_world_top(screen_x, screen_y, view_width, view_height, out_world_x, out_world_y);
+    if (closest_id >= 0) {
+        *out_plane_id = closest_id;
+        screen_to_world_top(local_x, local_y, view_width, view_height, out_world_x, out_world_y);
         return 1;
     }
-
     return 0;
 }
 
 void Visualizer::draw_altitude_view(PtWidget_t *raw_widget) {
     PhDim_t dim;
-    int w, h, i;
+    int w, h, i, alt;
     int plane_ids[256];
     int plane_count = 0;
+    double g;
 
     if (!raw_widget || !plane_controller) return;
 
@@ -208,22 +205,35 @@ void Visualizer::draw_altitude_view(PtWidget_t *raw_widget) {
     h = (int)dim.h;
     if (w <= 0 || h <= 0) return;
 
+    /* fill background */
     PgSetFillColor(COLOR_AREA_BG);
     PgDrawIRect(0, 0, w - 1, h - 1, Pg_DRAW_FILL);
 
-    draw_altitude_axes(w, h);
+    /* grid: horizontal lines every 2000 m altitude */
+    PgSetStrokeColor(COLOR_AREA_GRID);
+    for (alt = 0; alt <= MAX_ALTITUDE; alt += 2000) {
+        ScreenCoords a = world_to_screen_alt(0.0,          (double)alt, w, h);
+        ScreenCoords b = world_to_screen_alt(MAX_DISTANCE,  (double)alt, w, h);
+        PgDrawILine(a.screen_x, a.screen_y, b.screen_x, b.screen_y);
+    }
+    /* grid: vertical lines every 20 km distance */
+    for (g = 0.0; g <= MAX_DISTANCE + 0.001; g += 20.0) {
+        ScreenCoords a = world_to_screen_alt(g, 0.0,                 w, h);
+        ScreenCoords b = world_to_screen_alt(g, (double)MAX_ALTITUDE, w, h);
+        PgDrawILine(a.screen_x, a.screen_y, b.screen_x, b.screen_y);
+    }
 
+    /* planes */
     plane_controller->get_all_plane_ids(plane_ids, 256, &plane_count);
     for (i = 0; i < plane_count; i++) {
         PlaneData *pdata = plane_controller->get_plane(plane_ids[i]);
-        if (pdata) {
-            double dist = sqrt(pdata->x * pdata->x + pdata->y * pdata->y);
-            ScreenCoords sc = world_to_screen_alt(dist, pdata->altitude, w, h);
-            draw_plane_circle(sc, 4, get_plane_color(pdata->status));
-        }
+        if (!pdata) continue;
+        double dist = sqrt(pdata->x * pdata->x + pdata->y * pdata->y);
+        ScreenCoords sc = world_to_screen_alt(dist, pdata->altitude, w, h);
+        draw_circle(sc, 4, get_plane_color(pdata->status));
+        if (pdata->plane_id == selected_plane_id)
+            draw_selection_ring(sc, 9);
     }
 
-    fprintf(stderr, "draw_alt_view: before PgFlush\n");
     PgFlush();
-    fprintf(stderr, "draw_alt_view: after PgFlush\n");
 }

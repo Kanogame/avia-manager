@@ -42,8 +42,6 @@ void PlaneController::register_plane(int plane_id, int coid) {
     new_plane.coid = coid;
     new_plane.last_update = get_tick_ms();
 
-    fprintf(stderr, "plane_controller: registering plane %d with coid=%d\n", plane_id, coid);
-
     planes[plane_id] = new_plane;
 }
 
