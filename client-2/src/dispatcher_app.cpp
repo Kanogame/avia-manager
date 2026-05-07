@@ -1,8 +1,6 @@
 #include "dispatcher_app.h"
 #include "abimport.h"
 #include "proto.h"
-#include <photon/PtTimer.h>
-#include <photon/PtWindow.h>
 #include <photon/PtRaw.h>
 #include <photon/PtList.h>
 #include <photon/PhMacros.h>
@@ -16,7 +14,7 @@ DispatcherApp* DispatcherApp::instance_ptr = NULL;
 
 DispatcherApp::DispatcherApp()
     : collision_det(&plane_ctrl), visualizer(&plane_ctrl, &collision_det),
-      selected_plane_id(-1), timer_widget(NULL)
+      selected_plane_id(-1)
 {
 }
 
@@ -32,22 +30,6 @@ DispatcherApp* DispatcherApp::instance()
     return instance_ptr;
 }
 
-static void draw_top_view_fn(PtWidget_t *widget, PhTile_t *damage)
-{
-    DispatcherApp *app = DispatcherApp::instance();
-    if (app && widget) {
-        app->get_visualizer()->draw_top_view(widget);
-    }
-}
-
-static void draw_alt_view_fn(PtWidget_t *widget, PhTile_t *damage)
-{
-    DispatcherApp *app = DispatcherApp::instance();
-    if (app && widget) {
-        app->get_visualizer()->draw_altitude_view(widget);
-    }
-}
-
 int DispatcherApp::initialize()
 {
     if (ipc_mgr.initialize(&plane_ctrl) != 0) {
@@ -56,41 +38,13 @@ int DispatcherApp::initialize()
     }
 
     ipc_mgr.connect_to_servers();
-
-    PtSetResource(ABW_TopView, Pt_ARG_RAW_DRAW_F, draw_top_view_fn, 0);
-    PtSetResource(ABW_AltView, Pt_ARG_RAW_DRAW_F, draw_alt_view_fn, 0);
-
-    PtAddEventHandler(ABW_TopView, Ph_EV_BUT_PRESS,
-                      (PtCallbackF_t *)top_view_click_callback, NULL);
-
-    PtAddCallback(ABW_ActivePlanesList, Pt_CB_SELECTION,
-                  (PtCallbackF_t *)planes_list_callback, NULL);
-
-    PtAddCallback(ABW_base, Pt_CB_WINDOW_CLOSING,
-                  (PtCallbackF_t *)base_window_callback, NULL);
-
-    PtArg_t args[4];
-    int nargs = 0;
-    PtSetArg(&args[nargs++], Pt_ARG_TIMER_INITIAL, 100, 0);
-    PtSetArg(&args[nargs++], Pt_ARG_TIMER_REPEAT,  100, 0);
-
-    timer_widget = PtCreateWidget(PtTimer, NULL, nargs, args);
-    if (timer_widget) {
-        PtAddCallback(timer_widget, Pt_CB_TIMER_ACTIVATE,
-                      (PtCallbackF_t *)timer_callback, NULL);
-        PtRealizeWidget(timer_widget);
-    }
+    ipc_mgr.poll_servers();
 
     return 0;
 }
 
 void DispatcherApp::shutdown()
 {
-    if (timer_widget) {
-        PtDestroyWidget(timer_widget);
-        timer_widget = NULL;
-    }
-
     ipc_mgr.shutdown();
     plane_ctrl.clear();
     collision_det.clear();
@@ -142,13 +96,10 @@ int DispatcherApp::plane_selection_callback(PtWidget_t *widget, ApInfo_t *apinfo
     int plane_id = it->second;
     app->set_selected_plane_id(plane_id);
 
-    PlaneData *pdata = app->plane_ctrl.get_plane(plane_id);
-    if (pdata) {
-        char x_str[32], y_str[32];
-        snprintf(x_str, sizeof(x_str), "%.1f", pdata->x);
-        snprintf(y_str, sizeof(y_str), "%.1f", pdata->y);
-        PtSetResource(ABW_PlaneX, Pt_ARG_TEXT_STRING, x_str, 0);
-        PtSetResource(ABW_PlaneY, Pt_ARG_TEXT_STRING, y_str, 0);
+    if (ABW_PlaneID) {
+        char id_str[16];
+        snprintf(id_str, sizeof(id_str), "%d", plane_id);
+        PtSetResource(ABW_PlaneID, Pt_ARG_TEXT_STRING, id_str, 0);
     }
 
     return Pt_CONTINUE;
@@ -161,29 +112,35 @@ int DispatcherApp::change_course_callback(PtWidget_t *widget, ApInfo_t *apinfo,
     if (!app) return Pt_CONTINUE;
 
     int plane_id = app->get_selected_plane_id();
-    if (plane_id < 0) return Pt_CONTINUE;
 
-    char *x_str = NULL;
-    char *y_str = NULL;
-    PtGetResource(ABW_PlaneX, Pt_ARG_TEXT_STRING, &x_str, 0);
-    PtGetResource(ABW_PlaneY, Pt_ARG_TEXT_STRING, &y_str, 0);
-
-    if (!x_str || !y_str) return Pt_CONTINUE;
-
-    double target_x = atof(x_str);
-    double target_y = atof(y_str);
-
-    PlaneData *pdata = app->plane_ctrl.get_plane(plane_id);
-    if (pdata) {
-        double dx = target_x - pdata->x;
-        double dy = target_y - pdata->y;
-        /* atan2(dx,dy): angle from +y (North), positive toward +x (East) */
-        double heading = atan2(dx, dy) * 180.0 / M_PI;
-        if (heading < 0.0) heading += 360.0;
-
-        app->plane_ctrl.send_command_change_heading(plane_id, heading);
+    if (ABW_PlaneID) {
+        char *id_str = NULL;
+        PtGetResource(ABW_PlaneID, Pt_ARG_TEXT_STRING, &id_str, 0);
+        if (id_str && id_str[0] != '\0')
+            plane_id = atoi(id_str);
     }
 
+    PlaneData *pdata = app->plane_ctrl.get_plane(plane_id);
+    if (plane_id < 0 || !pdata) return Pt_CONTINUE;
+
+    app->set_selected_plane_id(plane_id);
+
+    /* reverse course: 180 degrees from current heading */
+    double new_heading = fmod(pdata->heading + 180.0, 360.0);
+    if (new_heading < 0.0) new_heading += 360.0;
+    app->plane_ctrl.send_command_change_heading(plane_id, new_heading);
+
+    /* sync list selection immediately */
+    PtListSelectPos(ABW_ActivePlanesList, 0);
+    for (std::map<int,int>::iterator it = app->list_index_to_plane_id.begin();
+         it != app->list_index_to_plane_id.end(); ++it) {
+        if (it->second == plane_id) {
+            PtListSelectPos(ABW_ActivePlanesList, it->first + 1);
+            break;
+        }
+    }
+
+    app->redraw_views();
     return Pt_CONTINUE;
 }
 
@@ -191,51 +148,55 @@ int DispatcherApp::top_view_click_callback(PtWidget_t *widget, ApInfo_t *apinfo,
                                            PtCallbackInfo_t *cbinfo)
 {
     DispatcherApp *app = DispatcherApp::instance();
-    if (!app || !cbinfo) return Pt_CONTINUE;
+    if (!app || !cbinfo || !widget) return Pt_CONTINUE;
 
     PhEvent_t *event = cbinfo->event;
-    if (!event || event->type != Ph_EV_BUT_PRESS) return Pt_CONTINUE;
+    if (!event || !(event->type & Ph_EV_BUT_PRESS)) return Pt_CONTINUE;
+    if (event->data_len == 0) return Pt_CONTINUE;
 
     PhPointerEvent_t *pe = (PhPointerEvent_t *)PhGetData(event);
-    if (!pe) return Pt_CONTINUE;
     if (!(pe->buttons & Ph_BUTTON_SELECT)) return Pt_CONTINUE;
 
     PhDim_t dim;
     PtWidgetDim(widget, &dim);
     int w = (int)dim.w;
     int h = (int)dim.h;
+    if (w <= 0 || h <= 0) return Pt_CONTINUE;
 
-    /* pe->pos is in absolute screen coordinates; convert to widget-local */
-    short wx, wy;
+    /* PhAB-registered callbacks deliver pe->pos in screen-absolute coords;
+       subtract the widget's absolute position to get widget-local. */
+    short wx = 0, wy = 0;
     PtGetAbsPosition(widget, &wx, &wy);
-    int click_x = pe->pos.x - (int)wx;
-    int click_y = pe->pos.y - (int)wy;
+    int click_x = (int)pe->pos.x - (int)wx;
+    int click_y = (int)pe->pos.y - (int)wy;
 
     int plane_id = -1;
-    double world_x = 0.0, world_y = 0.0;
+    if (!app->visualizer.hit_test_plane_top_view(click_x, click_y, w, h,
+                                                  &plane_id, NULL, NULL))
+        return Pt_CONTINUE;
 
-    if (app->visualizer.hit_test_plane_top_view(click_x, click_y, w, h, &plane_id, &world_x, &world_y)) {
-        app->set_selected_plane_id(plane_id);
+    if (!app->plane_ctrl.get_plane(plane_id)) return Pt_CONTINUE;
 
-        PlaneData *pdata = app->plane_ctrl.get_plane(plane_id);
-        if (pdata) {
-            char x_str[32], y_str[32];
-            snprintf(x_str, sizeof(x_str), "%.1f", pdata->x);
-            snprintf(y_str, sizeof(y_str), "%.1f", pdata->y);
-            PtSetResource(ABW_PlaneX, Pt_ARG_TEXT_STRING, x_str, 0);
-            PtSetResource(ABW_PlaneY, Pt_ARG_TEXT_STRING, y_str, 0);
+    app->set_selected_plane_id(plane_id);
 
-            PtListSelectPos(ABW_ActivePlanesList, 0);
-            for (std::map<int, int>::iterator it = app->list_index_to_plane_id.begin();
-                 it != app->list_index_to_plane_id.end(); ++it) {
-                if (it->second == plane_id) {
-                    PtListSelectPos(ABW_ActivePlanesList, it->first + 1);
-                    break;
-                }
+    if (ABW_PlaneID) {
+        char id_str[16];
+        snprintf(id_str, sizeof(id_str), "%d", plane_id);
+        PtSetResource(ABW_PlaneID, Pt_ARG_TEXT_STRING, id_str, 0);
+    }
+
+    if (ABW_ActivePlanesList) {
+        PtListSelectPos(ABW_ActivePlanesList, 0);
+        for (std::map<int, int>::iterator it = app->list_index_to_plane_id.begin();
+             it != app->list_index_to_plane_id.end(); ++it) {
+            if (it->second == plane_id) {
+                PtListSelectPos(ABW_ActivePlanesList, it->first + 1);
+                break;
             }
         }
     }
 
+    app->redraw_views();
     return Pt_CONTINUE;
 }
 

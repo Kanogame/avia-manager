@@ -51,6 +51,16 @@ int IPCManager::connect_to_servers()
 
         plane_ctrl->register_plane(plane_id, coid);
         connected_ids.insert(plane_id);
+
+        StateRequest req;
+        req.msg_type = MSG_STATE_REQUEST;
+        req.plane_id = plane_id;
+        PlaneState state;
+        memset(&state, 0, sizeof(state));
+        if (MsgSend(coid, (char *)&req, sizeof(req), (char *)&state, sizeof(state)) >= 0
+            && state.msg_type == MSG_PLANE_STATE) {
+            plane_ctrl->update_plane(state);
+        }
     }
 
     funlockfile(f);

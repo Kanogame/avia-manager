@@ -35,16 +35,15 @@ ScreenCoords Visualizer::world_to_screen_top(double world_x, double world_y,
     return sc;
 }
 
-ScreenCoords Visualizer::world_to_screen_alt(double distance_from_center, double altitude,
+ScreenCoords Visualizer::world_to_screen_alt(double world_x, double altitude,
                                               int view_width, int view_height) {
     ScreenCoords sc;
-    double norm_x = distance_from_center / MAX_DISTANCE;
+    double norm_x = (world_x - SERVICE_AREA_X_MIN) / (SERVICE_AREA_X_MAX - SERVICE_AREA_X_MIN);
     double norm_y = altitude / (double)MAX_ALTITUDE;
     if (norm_x < 0.0) norm_x = 0.0;
     if (norm_x > 1.0) norm_x = 1.0;
     if (norm_y < 0.0) norm_y = 0.0;
     if (norm_y > 1.0) norm_y = 1.0;
-    /* Returns widget-local coordinates (0,0) at widget top-left */
     sc.screen_x = (int)(norm_x * (double)(view_width  - 1));
     sc.screen_y = (int)((1.0 - norm_y) * (double)(view_height - 1));  /* altitude = up */
     return sc;
@@ -161,7 +160,7 @@ int Visualizer::hit_test_plane_top_view(int local_x, int local_y, int view_width
     int plane_ids[256];
     int plane_count = 0;
     int closest_id = -1;
-    double closest_dist = 15.0;
+    double closest_dist = 25.0;
     int i;
 
     if (!plane_controller) return 0;
@@ -185,7 +184,8 @@ int Visualizer::hit_test_plane_top_view(int local_x, int local_y, int view_width
 
     if (closest_id >= 0) {
         *out_plane_id = closest_id;
-        screen_to_world_top(local_x, local_y, view_width, view_height, out_world_x, out_world_y);
+        if (out_world_x && out_world_y)
+            screen_to_world_top(local_x, local_y, view_width, view_height, out_world_x, out_world_y);
         return 1;
     }
     return 0;
@@ -212,12 +212,12 @@ void Visualizer::draw_altitude_view(PtWidget_t *raw_widget) {
     /* grid: horizontal lines every 2000 m altitude */
     PgSetStrokeColor(COLOR_AREA_GRID);
     for (alt = 0; alt <= MAX_ALTITUDE; alt += 2000) {
-        ScreenCoords a = world_to_screen_alt(0.0,          (double)alt, w, h);
-        ScreenCoords b = world_to_screen_alt(MAX_DISTANCE,  (double)alt, w, h);
+        ScreenCoords a = world_to_screen_alt(SERVICE_AREA_X_MIN, (double)alt, w, h);
+        ScreenCoords b = world_to_screen_alt(SERVICE_AREA_X_MAX, (double)alt, w, h);
         PgDrawILine(a.screen_x, a.screen_y, b.screen_x, b.screen_y);
     }
-    /* grid: vertical lines every 20 km distance */
-    for (g = 0.0; g <= MAX_DISTANCE + 0.001; g += 20.0) {
+    /* grid: vertical lines every 10 km — matches top view X grid */
+    for (g = SERVICE_AREA_X_MIN; g <= SERVICE_AREA_X_MAX + 0.001; g += 10.0) {
         ScreenCoords a = world_to_screen_alt(g, 0.0,                 w, h);
         ScreenCoords b = world_to_screen_alt(g, (double)MAX_ALTITUDE, w, h);
         PgDrawILine(a.screen_x, a.screen_y, b.screen_x, b.screen_y);
@@ -228,8 +228,7 @@ void Visualizer::draw_altitude_view(PtWidget_t *raw_widget) {
     for (i = 0; i < plane_count; i++) {
         PlaneData *pdata = plane_controller->get_plane(plane_ids[i]);
         if (!pdata) continue;
-        double dist = sqrt(pdata->x * pdata->x + pdata->y * pdata->y);
-        ScreenCoords sc = world_to_screen_alt(dist, pdata->altitude, w, h);
+        ScreenCoords sc = world_to_screen_alt(pdata->x, pdata->altitude, w, h);
         draw_circle(sc, 4, get_plane_color(pdata->status));
         if (pdata->plane_id == selected_plane_id)
             draw_selection_ring(sc, 9);

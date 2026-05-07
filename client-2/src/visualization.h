@@ -46,7 +46,7 @@ private:
     int                selected_plane_id;
 
     ScreenCoords world_to_screen_top(double world_x, double world_y, int view_width, int view_height);
-    ScreenCoords world_to_screen_alt(double distance_from_center, double altitude, int view_width, int view_height);
+    ScreenCoords world_to_screen_alt(double world_x, double altitude, int view_width, int view_height);
     void screen_to_world_top(int screen_x, int screen_y, int view_width, int view_height,
                              double *out_world_x, double *out_world_y);
     PgColor_t get_plane_color(PlaneStatus status);

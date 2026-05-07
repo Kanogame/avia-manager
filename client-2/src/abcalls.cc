@@ -3,45 +3,54 @@
 #include <string.h>
 #include <Pt.h>
 #include <Ap.h>
+#include <photon/PtRaw.h>
+#include <photon/PtList.h>
+#include <photon/PhMacros.h>
 
 #include "abimport.h"
 #include "dispatcher_app.h"
 
-static int change_course_btn_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo);
-
-extern "C" {
-
-int abcalls(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)
+void draw_top_view_fn(PtWidget_t *widget, PhTile_t *damage)
 {
-    return change_course_btn_callback(widget, apinfo, cbinfo);
+    DispatcherApp *app = DispatcherApp::instance();
+    if (app && widget)
+        app->get_visualizer()->draw_top_view(widget);
 }
 
-int app_initialize(void)
+void draw_alt_view_fn(PtWidget_t *widget, PhTile_t *damage)
 {
-    return DispatcherApp::instance()->initialize();
+    DispatcherApp *app = DispatcherApp::instance();
+    if (app && widget)
+        app->get_visualizer()->draw_altitude_view(widget);
 }
 
-void app_shutdown(void)
+int timer_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)
 {
-    DispatcherApp::instance()->shutdown();
+    return DispatcherApp::timer_callback(widget, apinfo, cbinfo);
 }
 
+int top_view_click_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)
+{
+    return DispatcherApp::instance()->top_view_click_callback(widget, apinfo, cbinfo);
 }
 
-static int
-change_course_btn_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)
+int change_course_btn_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)
 {
     return DispatcherApp::instance()->change_course_callback(widget, apinfo, cbinfo);
 }
 
-int
-planes_list_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)
+int planes_list_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)
 {
     return DispatcherApp::instance()->plane_selection_callback(widget, apinfo, cbinfo);
 }
 
-int
-base_window_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)
+int window_initialize_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)
+{
+    return DispatcherApp::instance()->initialize();
+    return Pt_CONTINUE;
+}
+
+int window_shutdown_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)
 {
     DispatcherApp::instance()->shutdown();
     return Pt_CONTINUE;

@@ -44,7 +44,6 @@ private:
     Visualizer        visualizer;
 
     int        selected_plane_id;
-    PtWidget_t *timer_widget;
 
     std::map<int, int> list_index_to_plane_id;
     std::vector<std::string> plane_list_items;
