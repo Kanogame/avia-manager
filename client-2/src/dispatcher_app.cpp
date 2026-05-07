@@ -50,11 +50,6 @@ void DispatcherApp::shutdown()
     collision_det.clear();
 }
 
-int DispatcherApp::ipc_channel_callback(int fd, void *data, unsigned mode)
-{
-    return Pt_CONTINUE;
-}
-
 int DispatcherApp::timer_callback(PtWidget_t *widget, ApInfo_t *apinfo,
                                    PtCallbackInfo_t *cbinfo)
 {
@@ -64,12 +59,8 @@ int DispatcherApp::timer_callback(PtWidget_t *widget, ApInfo_t *apinfo,
     static int tick = 0;
     ++tick;
 
-    if (tick % 10 == 0) {
-        app->ipc_mgr.poll_servers();
-    }
-    if (tick % 20 == 0) {
-        app->ipc_mgr.connect_to_servers();
-    }
+    app->ipc_mgr.poll_servers();
+    app->ipc_mgr.connect_to_servers();
 
     app->plane_ctrl.check_offline_planes();
     app->collision_det.check_collisions();
@@ -88,7 +79,7 @@ int DispatcherApp::plane_selection_callback(PtWidget_t *widget, ApInfo_t *apinfo
     PtListCallback_t *list_cb = (PtListCallback_t *)cbinfo->cbdata;
     if (!list_cb || list_cb->sel_item_count <= 0) return Pt_CONTINUE;
 
-    int selected_index = list_cb->item_pos - 1; /* item_pos is 1-based */
+    int selected_index = list_cb->item_pos - 1; 
 
     std::map<int, int>::iterator it = app->list_index_to_plane_id.find(selected_index);
     if (it == app->list_index_to_plane_id.end()) return Pt_CONTINUE;
@@ -125,12 +116,10 @@ int DispatcherApp::change_course_callback(PtWidget_t *widget, ApInfo_t *apinfo,
 
     app->set_selected_plane_id(plane_id);
 
-    /* reverse course: 180 degrees from current heading */
     double new_heading = fmod(pdata->heading + 180.0, 360.0);
     if (new_heading < 0.0) new_heading += 360.0;
     app->plane_ctrl.send_command_change_heading(plane_id, new_heading);
 
-    /* sync list selection immediately */
     PtListSelectPos(ABW_ActivePlanesList, 0);
     for (std::map<int,int>::iterator it = app->list_index_to_plane_id.begin();
          it != app->list_index_to_plane_id.end(); ++it) {
@@ -163,8 +152,6 @@ int DispatcherApp::top_view_click_callback(PtWidget_t *widget, ApInfo_t *apinfo,
     int h = (int)dim.h;
     if (w <= 0 || h <= 0) return Pt_CONTINUE;
 
-    /* PhAB-registered callbacks deliver pe->pos in screen-absolute coords;
-       subtract the widget's absolute position to get widget-local. */
     short wx = 0, wy = 0;
     PtGetAbsPosition(widget, &wx, &wy);
     int click_x = (int)pe->pos.x - (int)wx;
@@ -234,7 +221,6 @@ void DispatcherApp::update_ui_planes_list()
         list_index_to_plane_id[i] = plane_ids[i];
     }
 
-    /* Re-apply selection so it survives list rebuilds */
     if (selected_plane_id >= 0) {
         for (std::map<int,int>::iterator it = list_index_to_plane_id.begin();
              it != list_index_to_plane_id.end(); ++it) {

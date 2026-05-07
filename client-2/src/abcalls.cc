@@ -31,17 +31,17 @@ int timer_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinf
 
 int top_view_click_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)
 {
-    return DispatcherApp::instance()->top_view_click_callback(widget, apinfo, cbinfo);
+    return DispatcherApp::top_view_click_callback(widget, apinfo, cbinfo);
 }
 
 int change_course_btn_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)
 {
-    return DispatcherApp::instance()->change_course_callback(widget, apinfo, cbinfo);
+    return DispatcherApp::change_course_callback(widget, apinfo, cbinfo);
 }
 
 int planes_list_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)
 {
-    return DispatcherApp::instance()->plane_selection_callback(widget, apinfo, cbinfo);
+    return DispatcherApp::>plane_selection_callback(widget, apinfo, cbinfo);
 }
 
 int window_initialize_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo)

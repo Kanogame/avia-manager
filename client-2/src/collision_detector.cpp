@@ -11,7 +11,6 @@ CollisionDetector::~CollisionDetector() {
 double CollisionDetector::calculate_3d_distance(const PlaneData *p1, const PlaneData *p2) {
     if (!p1 || !p2) return -1.0;
 
-    /* altitude is in meters; x/y are in km — convert for consistent units */
     double alt1_km = p1->altitude / 1000.0;
     double alt2_km = p2->altitude / 1000.0;
 

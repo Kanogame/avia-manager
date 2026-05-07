@@ -29,9 +29,8 @@ ScreenCoords Visualizer::world_to_screen_top(double world_x, double world_y,
     if (norm_x > 1.0) norm_x = 1.0;
     if (norm_y < 0.0) norm_y = 0.0;
     if (norm_y > 1.0) norm_y = 1.0;
-    /* Returns widget-local coordinates (0,0) at widget top-left */
     sc.screen_x = (int)(norm_x * (double)(view_width  - 1));
-    sc.screen_y = (int)((1.0 - norm_y) * (double)(view_height - 1));  /* north = up */
+    sc.screen_y = (int)((1.0 - norm_y) * (double)(view_height - 1)); 
     return sc;
 }
 
@@ -62,7 +61,6 @@ void Visualizer::screen_to_world_top(int screen_x, int screen_y, int view_width,
     *out_world_y = SERVICE_AREA_Y_MIN + norm_y * (SERVICE_AREA_Y_MAX - SERVICE_AREA_Y_MIN);
 }
 
-/* ---- static drawing helpers (widget-local coordinates) ---- */
 
 static void draw_triangle(ScreenCoords center, double heading, int size, PgColor_t color) {
     double rad = heading * M_PI / 180.0;
@@ -107,7 +105,6 @@ static void draw_selection_ring(ScreenCoords center, int radius) {
     PgDrawEllipse(&c, &r, Pg_DRAW_STROKE);
 }
 
-/* ---- public draw functions ---- */
 
 void Visualizer::draw_top_view(PtWidget_t *raw_widget) {
     PhDim_t dim;
@@ -123,25 +120,22 @@ void Visualizer::draw_top_view(PtWidget_t *raw_widget) {
     h = (int)dim.h;
     if (w <= 0 || h <= 0) return;
 
-    /* fill background */
     PgSetFillColor(COLOR_AREA_BG);
     PgDrawIRect(0, 0, w - 1, h - 1, Pg_DRAW_FILL);
 
-    /* grid: vertical lines every 10 km */
     PgSetStrokeColor(COLOR_AREA_GRID);
     for (g = SERVICE_AREA_X_MIN; g <= SERVICE_AREA_X_MAX + 0.001; g += 10.0) {
         ScreenCoords a = world_to_screen_top(g, SERVICE_AREA_Y_MIN, w, h);
         ScreenCoords b = world_to_screen_top(g, SERVICE_AREA_Y_MAX, w, h);
         PgDrawILine(a.screen_x, a.screen_y, b.screen_x, b.screen_y);
     }
-    /* grid: horizontal lines every 10 km */
+
     for (g = SERVICE_AREA_Y_MIN; g <= SERVICE_AREA_Y_MAX + 0.001; g += 10.0) {
         ScreenCoords a = world_to_screen_top(SERVICE_AREA_X_MIN, g, w, h);
         ScreenCoords b = world_to_screen_top(SERVICE_AREA_X_MAX, g, w, h);
         PgDrawILine(a.screen_x, a.screen_y, b.screen_x, b.screen_y);
     }
 
-    /* planes */
     plane_controller->get_all_plane_ids(plane_ids, 256, &plane_count);
     for (i = 0; i < plane_count; i++) {
         PlaneData *pdata = plane_controller->get_plane(plane_ids[i]);
@@ -205,25 +199,22 @@ void Visualizer::draw_altitude_view(PtWidget_t *raw_widget) {
     h = (int)dim.h;
     if (w <= 0 || h <= 0) return;
 
-    /* fill background */
     PgSetFillColor(COLOR_AREA_BG);
     PgDrawIRect(0, 0, w - 1, h - 1, Pg_DRAW_FILL);
 
-    /* grid: horizontal lines every 2000 m altitude */
     PgSetStrokeColor(COLOR_AREA_GRID);
     for (alt = 0; alt <= MAX_ALTITUDE; alt += 2000) {
         ScreenCoords a = world_to_screen_alt(SERVICE_AREA_X_MIN, (double)alt, w, h);
         ScreenCoords b = world_to_screen_alt(SERVICE_AREA_X_MAX, (double)alt, w, h);
         PgDrawILine(a.screen_x, a.screen_y, b.screen_x, b.screen_y);
     }
-    /* grid: vertical lines every 10 km — matches top view X grid */
+
     for (g = SERVICE_AREA_X_MIN; g <= SERVICE_AREA_X_MAX + 0.001; g += 10.0) {
         ScreenCoords a = world_to_screen_alt(g, 0.0,                 w, h);
         ScreenCoords b = world_to_screen_alt(g, (double)MAX_ALTITUDE, w, h);
         PgDrawILine(a.screen_x, a.screen_y, b.screen_x, b.screen_y);
     }
 
-    /* planes */
     plane_controller->get_all_plane_ids(plane_ids, 256, &plane_count);
     for (i = 0; i < plane_count; i++) {
         PlaneData *pdata = plane_controller->get_plane(plane_ids[i]);

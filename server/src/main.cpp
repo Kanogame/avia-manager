@@ -9,7 +9,7 @@
 #include "ipc_protocol.h"
 
 #define PLANES_REGISTRY_FILE "/tmp/planes_registry"
-#define SPEED_KMS            (800.0 / 3600.0)   /* 800 km/h in km/s */
+#define SPEED_KMS            (800.0 / 3600.0)
 #define ZONE_MIN             (-50.0)
 #define ZONE_MAX             (50.0)
 #define TIMER_PULSE_CODE     _PULSE_CODE_MINAVAIL
@@ -102,22 +102,13 @@ int main(int argc, char *argv[])
 
     double altitude = rand_range(1000.0, 9000.0);
 
-    /* Pick a random point on the edge of the service zone and head toward it */
-    double edge_x, edge_y;
-    switch (rand() % 4) {
-    case 0: edge_x = rand_range(ZONE_MIN, ZONE_MAX); edge_y = ZONE_MAX; break;
-    case 1: edge_x = rand_range(ZONE_MIN, ZONE_MAX); edge_y = ZONE_MIN; break;
-    case 2: edge_x = ZONE_MAX; edge_y = rand_range(ZONE_MIN, ZONE_MAX); break;
-    default: edge_x = ZONE_MIN; edge_y = rand_range(ZONE_MIN, ZONE_MAX); break;
-    }
-    double heading = atan2(edge_x - pos_x, edge_y - pos_y) * 180.0 / M_PI;
+    double heading = rand_range(0.0, 360.0);
     if (heading < 0.0) heading += 360.0;
 
     g_chid = ChannelCreate(0);
     if (g_chid == -1) { perror("ChannelCreate"); return 1; }
 
-    /* Attach to our own channel so the timer can deliver pulses */
-    int self_coid = ConnectAttach(ND_LOCAL_NODE, getpid(), g_chid, _NTO_SIDE_CHANNEL, 0);
+    int self_coid = ConnectAttach(0, getpid(), g_chid, _NTO_SIDE_CHANNEL, 0);
     if (self_coid == -1) {
         perror("ConnectAttach self");
         shutdown_ipc();

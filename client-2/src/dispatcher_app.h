@@ -18,7 +18,6 @@ public:
     int initialize();
     void shutdown();
 
-    static int ipc_channel_callback(int fd, void *data, unsigned mode);
     static int timer_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo);
     static int plane_selection_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo);
     static int change_course_callback(PtWidget_t *widget, ApInfo_t *apinfo, PtCallbackInfo_t *cbinfo);

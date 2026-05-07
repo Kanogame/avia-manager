@@ -27,7 +27,7 @@ int IPCManager::connect_to_servers()
     if (!plane_ctrl) return -1;
 
     FILE *f = fopen(PLANES_REGISTRY_FILE, "r");
-    if (!f) return 0;   /* no servers yet — not an error */
+    if (!f) return 0;
 
     flockfile(f);
 
@@ -44,9 +44,9 @@ int IPCManager::connect_to_servers()
         if (connected_ids.find(plane_id) != connected_ids.end())
             continue;
 
-        int coid = ConnectAttach(ND_LOCAL_NODE, pid, chid, _NTO_SIDE_CHANNEL, 0);
+        int coid = ConnectAttach(0, pid, chid, _NTO_SIDE_CHANNEL, 0);
         if (coid < 0) {
-            continue; /* server may not be ready yet — retry next round */
+            continue;
         }
 
         plane_ctrl->register_plane(plane_id, coid);
@@ -93,7 +93,7 @@ int IPCManager::poll_servers()
                              (char *)&state, sizeof(state));
         if (result < 0) {
             plane_ctrl->set_plane_status(ids[i], STATUS_OFFLINE);
-            connected_ids.erase(ids[i]); /* allow reconnect on next connect_to_servers() */
+            connected_ids.erase(ids[i]);
         } else if (state.msg_type == MSG_PLANE_STATE) {
             plane_ctrl->update_plane(state);
         }
